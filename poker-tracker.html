@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Poker Tracker">
+<title>Poker Tracker</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --card2: #1e222b;
+    --border: #2a2f3a;
+    --text: #f0f1f3;
+    --text-secondary: #9aa0ac;
+    --text-muted: #656b78;
+    --accent: #4f8ef7;
+    --green: #2fbf71;
+    --red: #e5484d;
+    --amber: #f5a623;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: contain;
+  }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 90px; }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(15,17,21,0.92); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px 12px;
+  }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  header p { margin: 2px 0 0; font-size: 13px; color: var(--text-secondary); }
+  main { padding: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 12px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 12px; font-weight: 600; }
+  label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  input, select {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--card2); color: var(--text); font-size: 15px; margin-bottom: 12px;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  button {
+    border: none; border-radius: 8px; padding: 11px 16px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  button:active { opacity: 0.7; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; }
+  .btn-danger { background: rgba(229,72,77,0.15); color: var(--red); }
+  .btn-ghost { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
+  .btn-sm { padding: 7px 10px; font-size: 12px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .player-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .player-row:last-child { border-bottom: none; }
+  .player-name { flex: 1; font-size: 14px; font-weight: 500; }
+  .player-name .buyins { display: block; font-size: 11px; color: var(--text-muted); font-weight: 400; margin-top: 1px; }
+  .chip-input { width: 90px; padding: 8px 10px; margin: 0; font-size: 14px; text-align: right; }
+  .net { font-size: 14px; font-weight: 600; min-width: 64px; text-align: right; }
+  .net.pos { color: var(--green); }
+  .net.neg { color: var(--red); }
+  .net.zero { color: var(--text-muted); }
+  .icon-btn {
+    background: none; border: none; color: var(--text-muted); font-size: 18px; padding: 4px 6px;
+  }
+  nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+    background: rgba(15,17,21,0.95); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    display: flex; max-width: 480px; margin: 0 auto;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav button {
+    flex: 1; background: none; border-radius: 0; padding: 12px 4px 10px;
+    color: var(--text-muted); font-size: 11px; display: flex; flex-direction: column;
+    align-items: center; gap: 3px;
+  }
+  nav button.active { color: var(--accent); }
+  nav button .ic { font-size: 20px; }
+  .tab { display: none; }
+  .tab.active { display: block; }
+  .empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px 10px; }
+  .lb-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank { width: 22px; font-size: 13px; color: var(--text-muted); font-weight: 600; }
+  .lb-name { flex: 1; font-size: 14px; font-weight: 500; }
+  .lb-name .sub { display: block; font-size: 11px; color: var(--text-muted); font-weight: 400; }
+  .lb-net { font-size: 15px; font-weight: 600; }
+  .history-row { padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .history-row:last-child { border-bottom: none; }
+  .history-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .history-date { font-size: 14px; font-weight: 500; }
+  .history-meta { font-size: 12px; color: var(--text-muted); }
+  .history-hint { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+  .history-chevron { font-size: 11px; transition: transform 0.15s; }
+  .history-row.expanded .history-chevron { transform: rotate(90deg); }
+  .history-detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .history-row.expanded .history-detail { display: block; }
+  .hd-summary { display: flex; gap: 16px; margin-bottom: 10px; }
+  .hd-summary .hd-stat { font-size: 11px; color: var(--text-secondary); }
+  .hd-summary .hd-stat b { display: block; font-size: 15px; color: var(--text); font-weight: 600; }
+  .hd-table { width: 100%; border-collapse: collapse; }
+  .hd-table th { text-align: left; font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; padding: 0 6px 6px 0; font-weight: 600; }
+  .hd-table th:not(:first-child), .hd-table td:not(:first-child) { text-align: right; }
+  .hd-table td { font-size: 13px; padding: 6px 6px 6px 0; border-top: 1px solid var(--border); }
+  .hd-table .hd-buyins { font-size: 10px; color: var(--text-muted); display: block; margin-top: 1px; }
+  .timer { font-size: 13px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .autocomplete { position: relative; }
+  .ac-list {
+    position: absolute; top: 100%; left: 0; right: 0; background: var(--card2);
+    border: 1px solid var(--border); border-radius: 8px; margin-top: -8px; z-index: 5;
+    max-height: 180px; overflow-y: auto; display: none;
+  }
+  .ac-list.show { display: block; }
+  .ac-item { padding: 9px 12px; font-size: 14px; cursor: pointer; }
+  .ac-item:active { background: var(--card); }
+  .ac-item.create-new { color: var(--accent); border-top: 1px solid var(--border); }
+  .name-status { font-size: 12px; margin: -8px 0 12px; min-height: 16px; }
+  .name-status.ok { color: var(--green); }
+  .name-status.warn { color: var(--amber); }
+  .profile-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; cursor: pointer; }
+  .profile-block { border-bottom: 1px solid var(--border); }
+  .profile-block:last-child { border-bottom: none; }
+  .profile-chevron { font-size: 11px; color: var(--text-muted); transition: transform 0.15s; margin-left: 4px; }
+  .profile-block.expanded .profile-chevron { transform: rotate(90deg); }
+  .profile-detail { display: none; padding: 0 0 14px 44px; }
+  .profile-block.expanded .profile-detail { display: block; }
+  .pd-summary { display: flex; gap: 16px; margin-bottom: 10px; }
+  .pd-summary .pd-stat { font-size: 11px; color: var(--text-secondary); }
+  .pd-summary .pd-stat b { display: block; font-size: 15px; color: var(--text); font-weight: 600; }
+  .filter-chip {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; margin-bottom: 12px; font-size: 12px; color: var(--text-secondary);
+  }
+  .filter-chip button { padding: 3px 8px; font-size: 11px; background: transparent; border: 1px solid var(--border); }
+  .profile-avatar {
+    width: 34px; height: 34px; border-radius: 50%; background: var(--card2);
+    display: flex; align-items: center; justify-content: center; font-size: 13px;
+    font-weight: 600; color: var(--accent); flex-shrink: 0;
+  }
+  .profile-info { flex: 1; }
+  .profile-info .pname { font-size: 14px; font-weight: 500; }
+  .profile-info .pmeta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+  .floating-stack {
+    position: fixed; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom));
+    z-index: 25; display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+  }
+  .floating-stats {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 12px; text-align: right; min-width: 96px;
+  }
+  .floating-stats .fs-label { font-size: 10px; color: var(--text-muted); }
+  .floating-stats .fs-value { font-size: 15px; font-weight: 600; }
+  .fab {
+    width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--card2); color: var(--text-secondary); font-size: 18px;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .fab.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .section-label {
+    font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.04em; margin: 14px 0 4px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .admin-badge {
+    font-size: 10px; color: var(--accent); background: rgba(79,142,247,0.12);
+    padding: 2px 7px; border-radius: 100px; margin-left: 8px; font-weight: 600;
+  }
+  .buyin-edit-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .buyin-edit-item { display: flex; align-items: center; gap: 4px; }
+  .buyin-edit-item input {
+    width: 58px; margin: 0; padding: 5px 6px; font-size: 12px; border-radius: 6px;
+  }
+  .buyin-edit-item button {
+    padding: 2px 6px; font-size: 11px; background: var(--card2); color: var(--text-muted);
+    border-radius: 6px;
+  }
+  .buyin-add-btn { padding: 5px 8px; font-size: 12px; background: var(--card2); border-radius: 6px; }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.6);
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; max-width: 340px; width: 100%;
+  }
+  .modal-box h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+  .modal-box p { margin: 0 0 18px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button { flex: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Poker Tracker</h1>
+    <p id="header-sub">Loading...</p>
+  </header>
+  <main>
+
+    <div class="tab active" id="tab-game">
+      <div class="card" id="active-session-card" style="display:none;">
+        <h2 style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Current session</span>
+          <span class="timer" id="session-timer">00:00</span>
+        </h2>
+        <div style="margin-bottom:12px;">
+          <label>Date</label>
+          <input type="date" id="session-date">
+        </div>
+        <div class="autocomplete">
+          <label>Add player</label>
+          <input type="text" id="new-player-name" placeholder="Start typing a name" autocomplete="off">
+          <div class="ac-list" id="ac-list"></div>
+        </div>
+        <div class="name-status" id="name-status"></div>
+        <div class="row" style="margin-top:-4px;">
+          <div>
+            <label>Buy-in</label>
+            <input type="number" id="new-player-buyin" placeholder="0" inputmode="decimal">
+          </div>
+        </div>
+        <button class="btn-primary" id="add-player-btn">Add player</button>
+
+        <div id="player-list" style="margin-top:14px;"></div>
+
+        <div style="margin-top:14px;">
+          <button class="btn-ghost" id="end-session-btn" style="width:100%;">End session</button>
+        </div>
+      </div>
+
+      <div class="card" id="start-session-card">
+        <h2>Start a new session</h2>
+        <label>Date</label>
+        <input type="date" id="start-date">
+        <button class="btn-primary" id="start-session-btn">Start session</button>
+      </div>
+    </div>
+
+    <div class="tab" id="tab-history">
+      <div class="card">
+        <h2>Game history</h2>
+        <div class="filter-chip" id="history-filter-chip" style="display:none;">
+          <span class="filter-chip-label">Showing games with</span>
+          <button id="clear-history-filter">Clear</button>
+        </div>
+        <div id="history-list"><div class="empty">No games recorded yet.</div></div>
+      </div>
+    </div>
+
+    <div class="tab" id="tab-leaderboard">
+      <div class="card">
+        <h2>Leaderboard</h2>
+        <div id="leaderboard-list"><div class="empty">No players yet.</div></div>
+      </div>
+    </div>
+
+    <div class="tab" id="tab-profiles">
+      <div class="card">
+        <h2>Create profile</h2>
+        <label>Player name</label>
+        <input type="text" id="profile-name-input" placeholder="Full name" autocomplete="off">
+        <div class="name-status" id="profile-name-status"></div>
+        <button class="btn-primary" id="create-profile-btn">Create profile</button>
+      </div>
+      <div class="card">
+        <h2>All profiles</h2>
+        <div id="profile-list"><div class="empty">No profiles created yet.</div></div>
+      </div>
+    </div>
+
+  </main>
+
+  <div class="floating-stack" id="floating-stack" style="display:none;">
+    <div class="floating-stats">
+      <div class="fs-label">Pool</div>
+      <div class="fs-value" id="fs-pool">$0</div>
+    </div>
+    <div class="floating-stats">
+      <div class="fs-label">Players</div>
+      <div class="fs-value" id="fs-players">0</div>
+    </div>
+    <button class="fab" id="admin-fab" aria-label="Edit buy-ins">&#9998;</button>
+  </div>
+
+  <div class="modal-overlay" id="end-session-modal">
+    <div class="modal-box">
+      <h3>End this session?</h3>
+      <p id="end-session-message">This will save the game to your history. You can't undo this from here.</p>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="end-session-cancel">Cancel</button>
+        <button class="btn-danger" id="end-session-confirm">End session</button>
+      </div>
+    </div>
+  </div>
+
+  <nav>
+    <button class="nav-btn active" data-tab="game"><span class="ic">&#9827;</span>Game</button>
+    <button class="nav-btn" data-tab="history"><span class="ic">&#128197;</span>History</button>
+    <button class="nav-btn" data-tab="leaderboard"><span class="ic">&#127942;</span>Leaders</button>
+    <button class="nav-btn" data-tab="profiles"><span class="ic">&#128100;</span>Profiles</button>
+  </nav>
+</div>
+
+<script>
+(function () {
+  var state = {
+    activeSession: null,
+    games: [],
+    profiles: [],
+    adminMode: false,
+    historyFilter: null,
+    ready: false
+  };
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function fmtMoney(n) {
+    var sign = n < 0 ? '-' : '';
+    return sign + '$' + Math.abs(Math.round(n * 100) / 100).toLocaleString();
+  }
+
+  function netClass(n) {
+    if (n > 0) return 'pos';
+    if (n < 0) return 'neg';
+    return 'zero';
+  }
+
+  function escapeHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // Case-insensitive lookup: returns the canonical stored profile name, or null
+  function findProfile(typedName) {
+    var key = typedName.trim().toLowerCase();
+    if (!key) return null;
+    for (var i = 0; i < state.profiles.length; i++) {
+      if (state.profiles[i].toLowerCase() === key) return state.profiles[i];
+    }
+    return null;
+  }
+
+  function buyInTotal(p) {
+    if (Array.isArray(p.buyIns)) {
+      return p.buyIns.reduce(function (a, b) { return a + b; }, 0);
+    }
+    return typeof p.buyIn === 'number' ? p.buyIn : 0;
+  }
+
+  function initials(name) {
+    var parts = name.trim().split(/\s+/);
+    var s = parts[0][0] || '';
+    if (parts.length > 1) s += parts[parts.length - 1][0];
+    return s.toUpperCase();
+  }
+
+  // ---------- storage ----------
+  async function loadState() {
+    try {
+      var res = await window.storage.get('games', false);
+      state.games = res ? JSON.parse(res.value) : [];
+    } catch (e) { state.games = []; }
+    try {
+      var res2 = await window.storage.get('active-session', false);
+      state.activeSession = res2 ? JSON.parse(res2.value) : null;
+    } catch (e) { state.activeSession = null; }
+    try {
+      var res3 = await window.storage.get('profiles', false);
+      state.profiles = res3 ? JSON.parse(res3.value) : [];
+    } catch (e) { state.profiles = []; }
+    state.ready = true;
+  }
+
+  async function saveGames() {
+    try { await window.storage.set('games', JSON.stringify(state.games), false); }
+    catch (e) { console.error('save games failed', e); }
+  }
+
+  async function saveActiveSession() {
+    try {
+      if (state.activeSession) {
+        await window.storage.set('active-session', JSON.stringify(state.activeSession), false);
+      } else {
+        await window.storage.delete('active-session', false);
+      }
+    } catch (e) { console.error('save session failed', e); }
+  }
+
+  async function saveProfiles() {
+    try { await window.storage.set('profiles', JSON.stringify(state.profiles), false); }
+    catch (e) { console.error('save profiles failed', e); }
+  }
+
+  // ---------- derived data ----------
+  function leaderboardData() {
+    var map = {};
+    state.profiles.forEach(function (name) {
+      map[name] = { name: name, net: 0, games: 0 };
+    });
+    state.games.forEach(function (g) {
+      g.players.forEach(function (p) {
+        if (!map[p.name]) map[p.name] = { name: p.name, net: 0, games: 0 };
+        map[p.name].net += (p.buyOut - buyInTotal(p));
+        map[p.name].games += 1;
+      });
+    });
+    return Object.values(map).sort(function (a, b) { return b.net - a.net; });
+  }
+
+  function fmtDuration(ms) {
+    var mins = Math.round(ms / 60000);
+    var h = Math.floor(mins / 60);
+    var m = mins % 60;
+    return h > 0 ? (h + 'h ' + m + 'm') : m + 'm';
+  }
+
+  function playerGameStats(name) {
+    var games = state.games.filter(function (g) {
+      return g.players.some(function (p) { return p.name === name; });
+    });
+    var totalMs = 0;
+    var net = 0;
+    games.forEach(function (g) {
+      totalMs += (g.endedAt - g.startedAt);
+      var p = g.players.filter(function (pl) { return pl.name === name; })[0];
+      net += (p.buyOut - buyInTotal(p));
+    });
+    return { gamesCount: games.length, totalMs: totalMs, net: net };
+  }
+
+  // ---------- rendering ----------
+  function renderHeader() {
+    var sub = document.getElementById('header-sub');
+    if (state.activeSession) {
+      sub.textContent = state.activeSession.players.length + ' player' + (state.activeSession.players.length === 1 ? '' : 's') + ' in session';
+    } else {
+      sub.textContent = state.games.length + ' game' + (state.games.length === 1 ? '' : 's') + ' recorded';
+    }
+  }
+
+  function renderGameTab() {
+    var startCard = document.getElementById('start-session-card');
+    var activeCard = document.getElementById('active-session-card');
+    if (state.activeSession) {
+      startCard.style.display = 'none';
+      activeCard.style.display = 'block';
+      document.getElementById('session-date').value = state.activeSession.date;
+      document.getElementById('floating-stack').style.display = 'flex';
+      renderPlayerList();
+    } else {
+      startCard.style.display = 'block';
+      activeCard.style.display = 'none';
+      document.getElementById('start-date').value = todayStr();
+      document.getElementById('floating-stack').style.display = 'none';
+    }
+  }
+
+  function updateFloatingStack() {
+    if (!state.activeSession) return;
+    var players = state.activeSession.players;
+    var pool = players.reduce(function (sum, p) { return sum + buyInTotal(p); }, 0);
+    var activeCount = players.filter(function (p) { return p.buyOut === null; }).length;
+    var poolEl = document.getElementById('fs-pool');
+    var playersEl = document.getElementById('fs-players');
+    if (poolEl) poolEl.textContent = fmtMoney(pool);
+    if (playersEl) playersEl.textContent = activeCount;
+  }
+
+  function renderOnePlayerRow(p, i) {
+    var total = buyInTotal(p);
+    var net = (p.buyOut === null ? 0 : p.buyOut) - total;
+    var netLabel = p.buyOut === null ? 'in play' : fmtMoney(net);
+    var cls = p.buyOut === null ? 'zero' : netClass(net);
+    var buyIns = Array.isArray(p.buyIns) ? p.buyIns : [total];
+
+    var buyinDisplay;
+    if (state.adminMode) {
+      buyinDisplay = '<div class="buyin-edit-list">' +
+        buyIns.map(function (b, bi) {
+          return '<div class="buyin-edit-item">' +
+            '<input type="number" inputmode="decimal" value="' + b + '" data-player="' + i + '" data-buyin="' + bi + '">' +
+            (buyIns.length > 1 ? '<button data-remove-buyin="' + i + ':' + bi + '">&times;</button>' : '') +
+            '</div>';
+        }).join('') +
+        '<button class="buyin-add-btn" data-add-buyin="' + i + '">+ rebuy</button>' +
+        '</div>';
+    } else {
+      var breakdown = buyIns.map(function (b) { return fmtMoney(b); }).join(', ');
+      buyinDisplay = '<span class="buyins">Buy in total: ' + fmtMoney(total) + '<br>' + breakdown + '</span>';
+    }
+
+    return '' +
+      '<div class="player-row">' +
+        '<div class="player-name">' + escapeHtml(p.name) + buyinDisplay + '</div>' +
+        '<input type="number" class="chip-input" inputmode="decimal" placeholder="Buy-out" ' +
+          'value="' + (p.buyOut === null ? '' : p.buyOut) + '" data-idx="' + i + '" >' +
+        '<span class="net ' + cls + '">' + netLabel + '</span>' +
+        '<button class="icon-btn" data-remove="' + i + '">&times;</button>' +
+      '</div>';
+  }
+
+  function renderPlayerList() {
+    var list = document.getElementById('player-list');
+    var players = state.activeSession.players;
+    updateFloatingStack();
+
+    if (players.length === 0) {
+      list.innerHTML = '<div class="empty">No players added yet.</div>';
+      return;
+    }
+
+    var active = [];
+    var out = [];
+    players.forEach(function (p, i) {
+      if (p.buyOut === null) active.push(i); else out.push(i);
+    });
+
+    var outNetSum = out.reduce(function (sum, i) {
+      var p = players[i];
+      return sum + (p.buyOut - buyInTotal(p));
+    }, 0);
+
+    var html = '';
+    if (state.adminMode) html += '<div class="admin-badge">Admin mode — editing buy-ins</div>';
+    html += '<div class="section-label">Active (' + active.length + ')</div>';
+    html += active.length ? active.map(function (i) { return renderOnePlayerRow(players[i], i); }).join('') : '<div class="empty">No active players.</div>';
+    html += '<div class="section-label" style="display:flex; justify-content:space-between; align-items:center;">' +
+      '<span>Bought out (' + out.length + ')</span>' +
+      (out.length ? '<span class="net ' + netClass(outNetSum) + '" style="font-size:11px;">Net sum: ' + fmtMoney(outNetSum) + '</span>' : '') +
+      '</div>';
+    html += out.length ? out.map(function (i) { return renderOnePlayerRow(players[i], i); }).join('') : '<div class="empty">No one has bought out yet.</div>';
+    list.innerHTML = html;
+
+    list.querySelectorAll('.chip-input').forEach(function (input) {
+      input.addEventListener('change', function () {
+        var idx = parseInt(input.dataset.idx, 10);
+        var val = input.value === '' ? null : parseFloat(input.value);
+        state.activeSession.players[idx].buyOut = isNaN(val) ? null : val;
+        saveActiveSession();
+        renderPlayerList();
+      });
+    });
+    list.querySelectorAll('[data-remove]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(btn.dataset.remove, 10);
+        state.activeSession.players.splice(idx, 1);
+        saveActiveSession();
+        renderPlayerList();
+        renderHeader();
+      });
+    });
+    list.querySelectorAll('[data-player]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        var pIdx = parseInt(input.dataset.player, 10);
+        var bIdx = parseInt(input.dataset.buyin, 10);
+        var val = parseFloat(input.value);
+        if (isNaN(val)) return;
+        state.activeSession.players[pIdx].buyIns[bIdx] = val;
+        saveActiveSession();
+        renderPlayerList();
+      });
+    });
+    list.querySelectorAll('[data-remove-buyin]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var parts = btn.dataset.removeBuyin.split(':');
+        var pIdx = parseInt(parts[0], 10);
+        var bIdx = parseInt(parts[1], 10);
+        state.activeSession.players[pIdx].buyIns.splice(bIdx, 1);
+        saveActiveSession();
+        renderPlayerList();
+      });
+    });
+    list.querySelectorAll('[data-add-buyin]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pIdx = parseInt(btn.dataset.addBuyin, 10);
+        state.activeSession.players[pIdx].buyIns.push(0);
+        saveActiveSession();
+        renderPlayerList();
+      });
+    });
+  }
+
+  function renderHistory() {
+    var list = document.getElementById('history-list');
+    var container = document.getElementById('history-filter-chip');
+    if (state.historyFilter) {
+      container.style.display = 'flex';
+      container.querySelector('.filter-chip-label').textContent = 'Showing games with ' + state.historyFilter;
+    } else {
+      container.style.display = 'none';
+    }
+
+    var source = state.games;
+    if (state.historyFilter) {
+      source = source.filter(function (g) {
+        return g.players.some(function (p) { return p.name === state.historyFilter; });
+      });
+    }
+
+    if (source.length === 0) {
+      list.innerHTML = '<div class="empty">' + (state.historyFilter ? 'No games found for ' + escapeHtml(state.historyFilter) + '.' : 'No games recorded yet.') + '</div>';
+      return;
+    }
+    var sorted = source.slice().sort(function (a, b) { return b.startedAt - a.startedAt; });
+    list.innerHTML = sorted.map(function (g, gi) {
+      var durMin = Math.round((g.endedAt - g.startedAt) / 60000);
+      var durStr = durMin >= 60 ? (Math.floor(durMin/60) + 'h ' + (durMin % 60) + 'm') : durMin + 'm';
+      var pool = g.players.reduce(function (sum, p) { return sum + buyInTotal(p); }, 0);
+
+      var rows = g.players.slice().sort(function (a, b) {
+        return (b.buyOut - buyInTotal(b)) - (a.buyOut - buyInTotal(a));
+      }).map(function (p) {
+        var total = buyInTotal(p);
+        var net = p.buyOut - total;
+        var buyIns = Array.isArray(p.buyIns) ? p.buyIns : [total];
+        var buyinsStr = buyIns.length > 1 ? buyIns.map(function (b) { return fmtMoney(b); }).join(', ') : '';
+        return '' +
+          '<tr>' +
+            '<td>' + escapeHtml(p.name) + (buyinsStr ? '<span class="hd-buyins">' + buyinsStr + '</span>' : '') + '</td>' +
+            '<td>' + fmtMoney(total) + '</td>' +
+            '<td>' + fmtMoney(p.buyOut) + '</td>' +
+            '<td class="net ' + netClass(net) + '" style="display:table-cell;">' + fmtMoney(net) + '</td>' +
+          '</tr>';
+      }).join('');
+
+      return '' +
+        '<div class="history-row" data-game-idx="' + gi + '">' +
+          '<div class="history-top">' +
+            '<span class="history-date">' + g.date + '</span>' +
+            '<span class="history-hint"><span class="history-meta">' + durStr + ' &middot; ' + g.players.length + ' players</span><span class="history-chevron">&#9656;</span></span>' +
+          '</div>' +
+          '<div class="history-detail">' +
+            '<div class="hd-summary">' +
+              '<div class="hd-stat">Duration<b>' + durStr + '</b></div>' +
+              '<div class="hd-stat">Players<b>' + g.players.length + '</b></div>' +
+              '<div class="hd-stat">Total pool<b>' + fmtMoney(pool) + '</b></div>' +
+            '</div>' +
+            '<table class="hd-table">' +
+              '<thead><tr><th>Player</th><th>Buy-in</th><th>Buy-out</th><th>Net</th></tr></thead>' +
+              '<tbody>' + rows + '</tbody>' +
+            '</table>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+
+    list.querySelectorAll('.history-row').forEach(function (row) {
+      row.addEventListener('click', function () {
+        row.classList.toggle('expanded');
+      });
+    });
+  }
+
+  function renderLeaderboard() {
+    var list = document.getElementById('leaderboard-list');
+    var data = leaderboardData();
+    if (data.length === 0) {
+      list.innerHTML = '<div class="empty">No players yet.</div>';
+      return;
+    }
+    list.innerHTML = data.map(function (p, i) {
+      return '' +
+        '<div class="lb-row">' +
+          '<div class="lb-rank">#' + (i+1) + '</div>' +
+          '<div class="lb-name">' + escapeHtml(p.name) +
+            '<span class="sub">' + p.games + ' game' + (p.games === 1 ? '' : 's') + '</span>' +
+          '</div>' +
+          '<div class="lb-net ' + netClass(p.net) + '">' + fmtMoney(p.net) + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderProfiles() {
+    var list = document.getElementById('profile-list');
+    if (state.profiles.length === 0) {
+      list.innerHTML = '<div class="empty">No profiles created yet.</div>';
+      return;
+    }
+    var lb = leaderboardData();
+    var lbMap = {};
+    lb.forEach(function (p) { lbMap[p.name] = p; });
+    var sorted = state.profiles.slice().sort(function (a, b) { return a.localeCompare(b); });
+    list.innerHTML = sorted.map(function (name) {
+      var stats = lbMap[name] || { games: 0, net: 0 };
+      var full = playerGameStats(name);
+      return '' +
+        '<div class="profile-block" data-name="' + escapeHtml(name) + '">' +
+          '<div class="profile-row">' +
+            '<div class="profile-avatar">' + escapeHtml(initials(name)) + '</div>' +
+            '<div class="profile-info">' +
+              '<div class="pname">' + escapeHtml(name) + '</div>' +
+              '<div class="pmeta">' + stats.games + ' game' + (stats.games === 1 ? '' : 's') + ' &middot; ' + fmtMoney(stats.net) + '</div>' +
+            '</div>' +
+            '<span class="profile-chevron">&#9656;</span>' +
+          '</div>' +
+          '<div class="profile-detail">' +
+            '<div class="pd-summary">' +
+              '<div class="pd-stat">Games played<b>' + full.gamesCount + '</b></div>' +
+              '<div class="pd-stat">Total playtime<b>' + (full.gamesCount ? fmtDuration(full.totalMs) : '&ndash;') + '</b></div>' +
+              '<div class="pd-stat">Net<b class="net ' + netClass(full.net) + '">' + fmtMoney(full.net) + '</b></div>' +
+            '</div>' +
+            '<button class="btn-ghost btn-sm" data-view-history="' + escapeHtml(name) + '"' + (full.gamesCount === 0 ? ' disabled' : '') + '>View their game history</button>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+
+    list.querySelectorAll('.profile-row').forEach(function (row) {
+      row.addEventListener('click', function () {
+        row.closest('.profile-block').classList.toggle('expanded');
+      });
+    });
+    list.querySelectorAll('[data-view-history]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        goToFilteredHistory(btn.dataset.viewHistory);
+      });
+    });
+  }
+
+  function goToFilteredHistory(name) {
+    state.historyFilter = name;
+    document.querySelectorAll('.nav-btn').forEach(function (b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+    document.querySelector('.nav-btn[data-tab="history"]').classList.add('active');
+    document.getElementById('tab-history').classList.add('active');
+    renderHistory();
+  }
+
+  function renderAll() {
+    renderHeader();
+    renderGameTab();
+    renderHistory();
+    renderLeaderboard();
+    renderProfiles();
+  }
+
+  // ---------- timer ----------
+  var timerInterval = null;
+  function startTimerDisplay() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(function () {
+      if (!state.activeSession) return;
+      var elapsed = Date.now() - state.activeSession.startedAt;
+      var mins = Math.floor(elapsed / 60000);
+      var secs = Math.floor((elapsed % 60000) / 1000);
+      var h = Math.floor(mins / 60);
+      var m = mins % 60;
+      var str = (h > 0 ? h + ':' : '') + String(m).padStart(h > 0 ? 2 : 1,'0') + ':' + String(secs).padStart(2,'0');
+      var el = document.getElementById('session-timer');
+      if (el) el.textContent = str;
+    }, 1000);
+  }
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.nav-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.nav-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'history') { state.historyFilter = null; renderHistory(); }
+      if (btn.dataset.tab === 'leaderboard') renderLeaderboard();
+      if (btn.dataset.tab === 'profiles') renderProfiles();
+    });
+  });
+
+  document.getElementById('clear-history-filter').addEventListener('click', function () {
+    state.historyFilter = null;
+    renderHistory();
+  });
+
+  // ---------- admin mode ----------
+  document.getElementById('admin-fab').addEventListener('click', function () {
+    state.adminMode = !state.adminMode;
+    this.classList.toggle('on', state.adminMode);
+    if (state.activeSession) renderPlayerList();
+  });
+
+  // ---------- session actions ----------
+  document.getElementById('start-session-btn').addEventListener('click', function () {
+    var date = document.getElementById('start-date').value || todayStr();
+    state.activeSession = { date: date, startedAt: Date.now(), players: [] };
+    saveActiveSession();
+    renderAll();
+    startTimerDisplay();
+  });
+
+  var addPlayerBtn = document.getElementById('add-player-btn');
+  addPlayerBtn.addEventListener('click', function () {
+    var nameInput = document.getElementById('new-player-name');
+    var buyinInput = document.getElementById('new-player-buyin');
+    var typed = nameInput.value.trim();
+    var matched = findProfile(typed);
+    if (!matched) {
+      showNameStatus('No profile found for "' + typed + '". Create a profile first.', 'warn');
+      return;
+    }
+    var buyin = parseFloat(buyinInput.value);
+    if (isNaN(buyin)) { buyinInput.focus(); return; }
+
+    var existingIdx = -1;
+    for (var i = 0; i < state.activeSession.players.length; i++) {
+      if (state.activeSession.players[i].name === matched) { existingIdx = i; break; }
+    }
+    if (existingIdx > -1) {
+      state.activeSession.players[existingIdx].buyIns.push(buyin);
+      state.activeSession.players[existingIdx].buyOut = null;
+    } else {
+      state.activeSession.players.push({ name: matched, buyIns: [buyin], buyOut: null });
+    }
+    nameInput.value = '';
+    buyinInput.value = '';
+    showNameStatus('', '');
+    document.getElementById('ac-list').classList.remove('show');
+    saveActiveSession();
+    renderPlayerList();
+    renderHeader();
+    nameInput.focus();
+  });
+
+  document.getElementById('end-session-btn').addEventListener('click', function () {
+    if (!state.activeSession) return;
+    var modal = document.getElementById('end-session-modal');
+    var msg = document.getElementById('end-session-message');
+    if (state.activeSession.players.length === 0) {
+      msg.textContent = 'No players were added. This session will be discarded.';
+    } else {
+      var unresolved = state.activeSession.players.filter(function (p) { return p.buyOut === null; });
+      if (unresolved.length > 0) {
+        msg.textContent = unresolved.length + ' player(s) still have no buy-out entered and will be recorded as $0. This will save the game to your history.';
+      } else {
+        msg.textContent = 'This will save the game to your history. You can\'t undo this from here.';
+      }
+    }
+    modal.classList.add('show');
+  });
+
+  document.getElementById('end-session-cancel').addEventListener('click', function () {
+    document.getElementById('end-session-modal').classList.remove('show');
+  });
+
+  document.getElementById('end-session-confirm').addEventListener('click', function () {
+    document.getElementById('end-session-modal').classList.remove('show');
+    if (state.activeSession.players.length === 0) {
+      state.activeSession = null;
+      saveActiveSession();
+      renderAll();
+      return;
+    }
+    var unresolved = state.activeSession.players.filter(function (p) { return p.buyOut === null; });
+    unresolved.forEach(function (p) { p.buyOut = 0; });
+    var game = {
+      date: state.activeSession.date,
+      startedAt: state.activeSession.startedAt,
+      endedAt: Date.now(),
+      players: state.activeSession.players
+    };
+    state.games.push(game);
+    state.activeSession = null;
+    state.adminMode = false;
+    document.getElementById('admin-fab').classList.remove('on');
+    saveGames();
+    saveActiveSession();
+    if (timerInterval) clearInterval(timerInterval);
+    renderAll();
+  });
+
+  // ---------- name autocomplete + validation (Game tab) ----------
+  function showNameStatus(msg, cls) {
+    var el = document.getElementById('name-status');
+    el.textContent = msg;
+    el.className = 'name-status' + (cls ? ' ' + cls : '');
+  }
+
+  var nameInput = document.getElementById('new-player-name');
+  nameInput.addEventListener('input', function () {
+    var typed = nameInput.value.trim();
+    var acList = document.getElementById('ac-list');
+    if (!typed) { acList.classList.remove('show'); showNameStatus('', ''); return; }
+
+    var lower = typed.toLowerCase();
+    var matches = state.profiles.filter(function (n) {
+      return n.toLowerCase().indexOf(lower) === 0;
+    }).slice(0, 6);
+
+    if (matches.length === 0) {
+      acList.innerHTML = '<div class="ac-item create-new" data-goto-profiles="1">No matching profile &middot; tap to create one</div>';
+      acList.classList.add('show');
+      showNameStatus('No profile found for "' + typed + '"', 'warn');
+    } else {
+      acList.innerHTML = matches.map(function (n) {
+        return '<div class="ac-item" data-name="' + escapeHtml(n) + '">' + escapeHtml(n) + '</div>';
+      }).join('');
+      acList.classList.add('show');
+      var exact = findProfile(typed);
+      showNameStatus(exact ? 'Matched profile: ' + exact : '', exact ? 'ok' : '');
+    }
+
+    acList.querySelectorAll('.ac-item[data-name]').forEach(function (item) {
+      item.addEventListener('click', function () {
+        nameInput.value = item.dataset.name;
+        acList.classList.remove('show');
+        showNameStatus('Matched profile: ' + item.dataset.name, 'ok');
+        document.getElementById('new-player-buyin').focus();
+      });
+    });
+    var gotoBtn = acList.querySelector('[data-goto-profiles]');
+    if (gotoBtn) {
+      gotoBtn.addEventListener('click', function () {
+        document.getElementById('profile-name-input').value = typed;
+        document.querySelector('.nav-btn[data-tab="profiles"]').click();
+        document.getElementById('profile-name-input').focus();
+      });
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.autocomplete')) {
+      document.getElementById('ac-list').classList.remove('show');
+    }
+  });
+
+  // ---------- profile creation ----------
+  var profileNameInput = document.getElementById('profile-name-input');
+  var createProfileBtn = document.getElementById('create-profile-btn');
+
+  function showProfileStatus(msg, cls) {
+    var el = document.getElementById('profile-name-status');
+    el.textContent = msg;
+    el.className = 'name-status' + (cls ? ' ' + cls : '');
+  }
+
+  profileNameInput.addEventListener('input', function () {
+    var typed = profileNameInput.value.trim();
+    if (!typed) { showProfileStatus('', ''); return; }
+    var existing = findProfile(typed);
+    if (existing) {
+      showProfileStatus('A profile named "' + existing + '" already exists', 'warn');
+    } else {
+      showProfileStatus('', '');
+    }
+  });
+
+  createProfileBtn.addEventListener('click', function () {
+    var typed = profileNameInput.value.trim();
+    if (!typed) { profileNameInput.focus(); return; }
+    var existing = findProfile(typed);
+    if (existing) {
+      showProfileStatus('A profile named "' + existing + '" already exists', 'warn');
+      return;
+    }
+    state.profiles.push(typed);
+    saveProfiles();
+    profileNameInput.value = '';
+    showProfileStatus('Profile created', 'ok');
+    renderProfiles();
+    renderLeaderboard();
+  });
+
+  // ---------- init ----------
+  loadState().then(function () {
+    document.getElementById('start-date').value = todayStr();
+    renderAll();
+    if (state.activeSession) startTimerDisplay();
+  });
+})();
+</script>
+</body>
+</html>
